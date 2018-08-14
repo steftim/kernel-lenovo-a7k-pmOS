@@ -1,0 +1,4 @@
+#!/system/bin/sh
+
+#Livedisplay
+echo '1' > /sys/devices/system/cpu/cpufreq/Poison/force_livedisplay

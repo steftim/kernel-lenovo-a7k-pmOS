@@ -1,0 +1,1 @@
+extern bool no_vibrate, vibrator_on_lock,force_disable_gestures_HARD, force_enable_gestures_charging;
