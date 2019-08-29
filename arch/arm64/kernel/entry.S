@@ -427,7 +427,7 @@ el1_irq:
 #ifdef CONFIG_TRACE_IRQFLAGS
 	bl	trace_hardirqs_off
 #endif
-    bl  MT_trace_hardirqs_off
+    //bl  MT_trace_hardirqs_off
 #ifdef CONFIG_PREEMPT
 	get_thread_info tsk
 	ldr	w24, [tsk, #TI_PREEMPT]		// get preempt count
@@ -443,7 +443,7 @@ el1_irq:
 	bl	el1_preempt
 1:
 #endif
-    bl  MT_trace_hardirqs_on
+    //bl  MT_trace_hardirqs_on
 #ifdef CONFIG_TRACE_IRQFLAGS
 	bl	trace_hardirqs_on
 #endif
@@ -632,7 +632,7 @@ el0_irq_naked:
 #ifdef CONFIG_TRACE_IRQFLAGS
 	bl	trace_hardirqs_off
 #endif
-    bl  MT_trace_hardirqs_off
+    //bl  MT_trace_hardirqs_off
 	get_thread_info tsk
 #ifdef CONFIG_PREEMPT
 	ldr	w24, [tsk, #TI_PREEMPT]		// get preempt count
@@ -649,7 +649,7 @@ el0_irq_naked:
 	str	x1, [x1]			// BUG
 1:
 #endif
-    bl  MT_trace_hardirqs_on
+    //bl  MT_trace_hardirqs_on
 #ifdef CONFIG_TRACE_IRQFLAGS
 	bl	trace_hardirqs_on
 #endif
