@@ -1538,7 +1538,7 @@ static ssize_t store_s2w_vibe(struct kobject *kobj, struct attribute *attr, cons
 	res = strict_strtoul(buf, 0, &input);
 	if (res >= 0 && input >= 0) {
 		s2w_vibe = input;
-        s2w_vibration_level = s2w_vibe;
+        //s2w_vibration_level = s2w_vibe;
 		if (!suspended)
 			thunderx_update_min_max_allcpus();
 	}
