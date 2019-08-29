@@ -832,8 +832,9 @@ static int __ref kernel_init(void *unused)
 
 	flush_delayed_fput();
 
-	log_boot("Kernel_init_done");
-	
+	//log_boot("Kernel_init_done");
+	printk("Kernel init done FICUUUUUUUUUUS");
+
 	if (ramdisk_execute_command) {
 		if (!run_init_process(ramdisk_execute_command))
 			return 0;
