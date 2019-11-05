@@ -52,6 +52,11 @@
 
 #include "mtk_ovl.h"
 #include <linux/ion_drv.h>
+#include <linux/errno.h>
+#include <linux/kernel.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/pci.h>
 
 #include "disp_helper.h"
 #if defined(CONFIG_ARCH_MT6752)
@@ -217,6 +222,7 @@ static int vsync_cnt;
 /* local function declarations */
 /* --------------------------------------------------------------------------- */
 
+static int init_framebuffer(struct fb_info *info);
 static int mtkfb_get_overlay_layer_info(struct fb_overlay_layer_info *layerInfo);
 
 
@@ -272,47 +278,44 @@ static int mtkfb_release(struct fb_info *info, int user)
  * palette if one is available. For now we support only 16bpp and thus store
  * the entry only to the pseudo palette.
  */
+/*mtkfb_setcolreg() replace*/
+
 static int mtkfb_setcolreg(u_int regno, u_int red, u_int green,
-			   u_int blue, u_int transp, struct fb_info *info)
+			   u_int blue, u_int transp,
+			   struct fb_info *info)
 {
-	int r = 0;
-	unsigned bpp, m;
+    if (regno >= 256)
+       return -EINVAL;
+       
+    if (info->var.grayscale) {
+       red = green = blue = (red * 77 + green * 151 + blue * 28) >> 8;
+    }
 
-	NOT_REFERENCED(transp);
+#define CNVT_TOHW(val,width) ((((val)<<(width))+0x7FFF-(val))>>16)
+    red = CNVT_TOHW(red, info->var.red.length);
+    green = CNVT_TOHW(green, info->var.green.length);
+    blue = CNVT_TOHW(blue, info->var.blue.length);
+    transp = CNVT_TOHW(transp, info->var.transp.length);
+#undef CNVT_TOHW
 
-	MSG_FUNC_ENTER();
+    if (info->fix.visual == FB_VISUAL_TRUECOLOR ||
+	info->fix.visual == FB_VISUAL_DIRECTCOLOR) {
+	    u32 v;
 
-	bpp = info->var.bits_per_pixel;
-	m = 1 << bpp;
-	if (regno >= m) {
-		r = -EINVAL;
-		goto exit;
-	}
+	    if (regno >= 16)
+		    return -EINVAL;
 
-	switch (bpp) {
-	case 16:
-		/* RGB 565 */
-		((u32 *) (info->pseudo_palette))[regno] =
-		    ((red & 0xF800) | ((green & 0xFC00) >> 5) | ((blue & 0xF800) >> 11));
-		break;
-	case 32:
-		/* ARGB8888 */
-		((u32 *) (info->pseudo_palette))[regno] =
-		    (0xff000000) |
-		    ((red & 0xFF00) << 8) | ((green & 0xFF00)) | ((blue & 0xFF00) >> 8);
-		break;
+	    v = (red << info->var.red.offset) |
+		    (green << info->var.green.offset) |
+		    (blue << info->var.blue.offset) |
+		    (transp << info->var.transp.offset);
 
-		/* TODO: RGB888, BGR888, ABGR8888 */
+	    ((u32*)(info->pseudo_palette))[regno] = v;
+    }
 
-	default:
-		ASSERT(0);
-	}
-
-exit:
-	MSG_FUNC_LEAVE();
-	return r;
+    return 0;
 }
-
+ 
 //lenovo wangyq13 modify for cmd mode lcd 20150305
 #if defined(OTM1902A_FHD_DSI_CMD_TIANMA) || defined(NT35695_FHD_DSI_CMD_YASSY)
 unsigned int cmd_esd_last_backlight_level = 255;
@@ -1199,6 +1202,59 @@ static int mtkfb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg
 		return r;
 	}
 
+	/*case MTKFB_CAPTURE_FRAMEBUFFER:
+	{
+		unsigned long pbuf = 0;
+
+		if (copy_from_user(&pbuf, (void __user *)arg, sizeof(pbuf))) {
+			MTKFB_LOG("[FB]: copy_from_user failed! line:%d\n", __LINE__);
+			r = -EFAULT;
+		} else {
+			dprec_logger_start(DPREC_LOGGER_WDMA_DUMP, 0, 0);
+			primary_display_capture_framebuffer_ovl(pbuf, eBGRA8888);
+			dprec_logger_done(DPREC_LOGGER_WDMA_DUMP, 0, 0);
+		}
+
+		return r;
+	}*/
+
+	case MTKFB_SLT_AUTO_CAPTURE:
+	{
+		struct fb_slt_catpure capConfig;
+
+		if (copy_from_user(&capConfig, (void __user *)arg, sizeof(capConfig))) {
+			MTKFB_LOG("[FB]: copy_from_user failed! line:%d\n", __LINE__);
+			r = -EFAULT;
+		} else {
+			unsigned int format;
+
+			switch (capConfig.format) {
+			case MTK_FB_FORMAT_RGB888:
+				format = eRGB888;
+				break;
+			case MTK_FB_FORMAT_BGR888:
+				format = eBGR888;
+				break;
+			case MTK_FB_FORMAT_ARGB8888:
+				format = eARGB8888;
+				break;
+			case MTK_FB_FORMAT_RGB565:
+				format = eRGB565;
+				break;
+			case MTK_FB_FORMAT_UYVY:
+				format = eYUV_420_2P_UYVY;
+				break;
+			case MTK_FB_FORMAT_ABGR8888:
+			default:
+				format = eABGR8888;
+				break;
+			}
+			primary_display_capture_framebuffer_ovl((unsigned long)capConfig.outputBuffer, format);
+		}
+
+		return r;
+	}
+
 	case MTKFB_GET_OVERLAY_LAYER_INFO:
 	{
 		struct fb_overlay_layer_info layerInfo;
@@ -1316,6 +1372,20 @@ static int mtkfb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg
 		primary_display_trigger(1, NULL, 0);
 		return 0;
 	}
+
+	/*case MTKFB_META_RESTORE_SCREEN:
+	{
+		struct fb_var_screeninfo var;
+
+		if (copy_from_user(&var, argp, sizeof(var)))
+			return -EFAULT;
+
+		info->var.yoffset = var.yoffset;
+		init_framebuffer(info);
+
+		return mtkfb_pan_display_impl(&var, info);
+	}*/
+
 
 	case MTKFB_GET_DEFAULT_UPDATESPEED:
 	{
@@ -1522,6 +1592,7 @@ struct compat_fb_overlay_layer {
 #define COMPAT_MTKFB_CONFIG_IMMEDIATE_UPDATE	MTK_IOW(4, compat_ulong_t)
 
 #define COMPAT_MTKFB_GET_POWERSTATE		MTK_IOR(21, compat_ulong_t)
+#define COMPAT_MTKFB_META_RESTORE_SCREEN	MTK_IOW(101, compat_ulong_t)
 
 static void compat_convert(struct compat_fb_overlay_layer *compat_info,
 			   struct fb_overlay_layer *info)
@@ -1601,6 +1672,12 @@ static int mtkfb_compat_ioctl(struct fb_info *info, unsigned int cmd, unsigned l
 	{
 		arg = (unsigned long)compat_ptr(arg);
 		ret = mtkfb_ioctl(info, MTKFB_TRIG_OVERLAY_OUT, arg);
+		break;
+	}
+	case COMPAT_MTKFB_META_RESTORE_SCREEN:
+	{
+		arg = (unsigned long)compat_ptr(arg);
+		//ret = mtkfb_ioctl(info, MTKFB_META_RESTORE_SCREEN, arg);
 		break;
 	}
 	case COMPAT_MTKFB_SET_OVERLAY_LAYER:
@@ -1947,6 +2024,18 @@ static void mtkfb_fbinfo_cleanup(struct mtkfb_device *fbdev)
 	(((x) &  0x7E0) << 5) |		\
 	(((x) & 0xF800) << 8) |		\
 	(0xFF << 24)) /* opaque */
+
+/* Init frame buffer content as 3 R/G/B color bars for debug */
+static int init_framebuffer(struct fb_info *info)
+{
+	void *buffer = info->screen_base + info->var.yoffset * info->fix.line_length;
+
+	/* clean whole frame buffer as black */
+	memset(buffer, 0, info->screen_size);
+
+	return 0;
+}
+
 
 /**
  * Free driver resources. Can be called to rollback an aborted initialization

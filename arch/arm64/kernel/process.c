@@ -154,8 +154,8 @@ void machine_halt(void)
 	while (1);
 }
 
-extern int reboot_pid;
-//static int reboot_pid = 0;
+//extern int reboot_pid;
+static int reboot_pid = 0;
 
 void machine_power_off(void)
 {
