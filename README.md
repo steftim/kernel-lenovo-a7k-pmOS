@@ -21,7 +21,7 @@ This branch is for building MM/7.x based ROMs kernel.
         (for dt2w-enabled builds)
 
 ### Credits:
-  - tanish2k09 (me lol. Ma git Ma rulz)
+  - tanish2k09 (Venom source)
   - rohantaneja (one reckless boi... Also did a tiny contribution to project. Only gave the whole source base lmao)
   - xakep1993 (his N-port from Jiayu S3)
   - daniel_hk (his N-bringup for aio_otfp)
