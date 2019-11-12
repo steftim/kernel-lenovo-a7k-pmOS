@@ -131,7 +131,7 @@ kal_uint32 bq24157_read_interface (kal_uint8 RegNum, kal_uint8 *val, kal_uint8 M
     kal_uint8 bq24157_reg = 0;
     int ret = 0;
 
-   printk("--------------------------------------------------\n");
+   //printk("--------------------------------------------------\n");
 
     ret = bq24157_read_byte(RegNum, &bq24157_reg);
 
@@ -150,7 +150,7 @@ kal_uint32 bq24157_config_interface (kal_uint8 RegNum, kal_uint8 val, kal_uint8 
     kal_uint8 bq24157_reg = 0;
     int ret = 0;
 
-    printk("--------------------------------------------------\n");
+    //printk("--------------------------------------------------\n");
 
     ret = bq24157_read_byte(RegNum, &bq24157_reg);
     //printk("[bq24157_config_interface] Reg[%x]=0x%x\n", RegNum, bq24157_reg);
