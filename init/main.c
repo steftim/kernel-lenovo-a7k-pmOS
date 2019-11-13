@@ -9,7 +9,7 @@
  *  Simplified starting of init:  Michael A. Griffith <grif@acm.org> 
  */
 
-#define DEBUG		/* Enable initcall_debug */
+//#define DEBUG		/* Enable initcall_debug */
 
 #include <linux/types.h>
 #include <linux/module.h>
@@ -209,7 +209,7 @@ static int __init debug_kernel(char *str)
 
 static int __init quiet_kernel(char *str)
 {
-	console_loglevel = 4;
+	console_loglevel = 0;
 	return 0;
 }
 
