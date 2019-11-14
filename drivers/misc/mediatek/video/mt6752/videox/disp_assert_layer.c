@@ -9,7 +9,8 @@
 #include "ddp_mmp.h"
 #include "disp_session.h"
 /* /common part */
-#define DAL_BPP             (2)
+//#define DAL_BPP	    (2)
+#define DAL_BPP             (1)
 #define DAL_WIDTH           (DISP_GetScreenWidth())
 #define DAL_HEIGHT          (DISP_GetScreenHeight())
 
